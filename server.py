@@ -1,56 +1,78 @@
-import socket  # sockets and threading will handle connections to our server
-from _thread import *  # allows other to connect to our serve
+import socket
+from _thread import *
 import sys
 
-# this file is for creating server, whenever we want clients to connect this must be in running mode
-# the server scripts must be running on this i/p address as given in string "server" variable
-# we can run clients scrips on the same machine as i/p
-
-server = "192.168.0.105"  # this is my pcs i/p address from user prompt # server entrance
+server = "192.168.0.102"
 port = 5555
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # 1st parameter implies type of connection
-
-# bind our server to sockets
-
-
-#  if port 5555 is already being used it might throw error
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #  AFNET means types of connection, SOCK_STREAM means how information is coming in.
 
 try:
-    s.bind((server, port))  # binding server to port
-except socket.error as e:
+    s.bind((server, port))  # port might be busy then it might throw error, so encole in try except block
+except socket.error as e:  # connecting server and port
     str(e)
 
-s.listen(2)  # opening up port # if we dont pass anything as parameter it won't limit any number of clients but
-# we are going to limit it to 2
+s.listen(2)  # the parameter implies number of connection allows
+print("Waiting for a connection, Server Started")
 
-print("Waiting for a connection, Server started")
+def read_pos(str):
+    str = str.split(",")
+    return int(str[0]), int(str[1])
 
 
-def threaded_client(conn):
-    #  we want our client to be connected continously so we are going to do it in while loop
+def make_pos(tup):
+    return str(tup[0]) + "," + str(tup[1])
 
-    while True:
-        try:
-            data = conn.recv(2048)  # this 2048 represents size of data sent by client. If the size of
-            # data is large then we can put like 2048*5, but the larger the file the slower the client
-            reply = data.decode("utf-8")  # whenever we send data in client-server then we
-            # send encoded data, so we need to decode it here
+pos = [(0,0),(100,100)]
 
-            if not data:
+def threaded_client(conn, player):
+    conn.send(str.encode(make_pos(pos[player])))
+    reply = ""
+    while True:  # while client is connected it will be running continuously
+        try:  # if we get error try to increase this size
+            data = read_pos(conn.recv(2048).decode())  # this represent size of data, if we want larger amount of data then do like 2048*8, but they will become slower because larger amount of data
+            pos[player] = data
+
+            if not data:  # if we don't get any data, then it means the connection has ended
                 print("Disconnected")
                 break
-            else:
-                print("Received: ", reply)
-                print("Sending: ", reply)
+            else:  # then connection is there so getting and sending data
+                if player == 1:
+                    reply = pos[0]
+                else:
+                    reply = pos[1]
 
-            conn.sendall(str.encode(reply))  # sending data in encoded format (in byte size)
+                print("Received: ", data)
+                print("Sending : ", reply)
+
+            conn.sendall(str.encode(make_pos(reply)))  # sending information over server, so we convert data to byte format and send
         except:
             break
 
+    print("Lost connection")
+    conn.close()  # when we close connection, we need to do this
 
-while True:  # this loop will continuously check if there is any connection
-    conn, addr = s.accept()  # this is going accept clients, in addr variable IP address of client will be stored
-    print("Connected to: ", addr)
+currentPlayer = 0
+while True:  # this will continusouly look for connection, continusously try to grab connection
+    conn, addr = s.accept()  # this is conn is going to be the connection, addr will  be the ip address
+    print("Connected to:", addr)
 
-    start_new_thread(threaded_client(conn, ))
+    start_new_thread(threaded_client, (conn, currentPlayer))
+    currentPlayer += 1
+
+
+
+# if cannot run the server file then we mainly it might be because port number ex:5050 already being used
+# so we need to kill port 5050. To do this
+# do this in cmd prompt
+# netstat -ano | findstr :5555
+# then we will get o/p like this
+#  TCP    192.168.0.103:5050     0.0.0.0:0              LISTENING       8680
+#  UDP    0.0.0.0:5050           *:*                                    6772
+# in output there might be more than 2 rows somethings, just try all number, (Mainly the row which has LISTENING will do the work)
+# now try to destroy both 8680 and 6772, i am not sure which one but try to do with both if one dies it server will run again
+# taskkill /PID 7108 /F       # if this fails try
+# taskkill /PID 6772 /F
+# o/p will be now
+# SUCCESS: The process with PID 8680 has been terminated.
+
