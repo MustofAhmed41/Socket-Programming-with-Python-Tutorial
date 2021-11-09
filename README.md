@@ -12,6 +12,6 @@ A very simple painting app which is similar to Microsfot Paint. This is made usi
 
 
 
-<img src="images/doombuild.PNG" width="100" height="100" >
+<img src="images/doombuild.PNG" width="200" height="200" >
 
 ![](images/doombuild.PNG)
